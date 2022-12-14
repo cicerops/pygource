@@ -10,7 +10,7 @@ Renders video of repository commit history using gource, adds background song.
 
 Prerequisites::
 
-    sudo port install ffmpeg gource mp3wrap
+    brew install ffmpeg gource mp3wrap
 
 Synopsis::
 
