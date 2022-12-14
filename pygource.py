@@ -1,10 +1,3 @@
-import os
-import sys
-import re
-import shutil
-import shlex
-import subprocess
-
 """
 Renders video of repository commit history using gource, adds background song.
 
@@ -14,13 +7,20 @@ Prerequisites::
 
 Synopsis::
 
-    bin/gource-render-single \
+    python pygource.py \
         --name acme-trunk \
         --path ~/dev/three-investigators/acme/trunk \
         --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3' \
         --audio-loops 50 \
         # --overwrite
 """
+import os
+import sys
+import re
+import shutil
+import shlex
+import subprocess
+
 
 class GourceRenderer(object):
     """Renders project history using 'gource'."""
@@ -40,7 +40,14 @@ class GourceRenderer(object):
                 --hide bloom  \\
                 %(speed_options)s  \\
                 --file-idle-time 20 --max-file-lag 2.5  \\
-                --stop-at-end -o -"""
+                --stop-at-end \\
+                --output-ppm-stream - \\
+                %(path)s """
+        #
+        # --start-date "2022-01-01" \\
+        # --stop-date "2022-03-31" \\
+        # --stop-at-time 1 \\
+        #
 
         # options
         self.overwrite = overwrite
@@ -50,11 +57,12 @@ class GourceRenderer(object):
         self.audio_loops = audio_loops
         self.time_lapse = time_lapse
 
-    def get_gource_command(self, title):
+    def get_gource_command(self, path: str, title: str):
         speed_options = '--seconds-per-day 5 --time-scale 1.5'
         if self.time_lapse:
             speed_options = '--seconds-per-day 1 --time-scale 4'
         gource_options = {
+            'path': path,
             'title': title,
             'speed_options': speed_options,
         }
@@ -99,26 +107,25 @@ class GourceRenderer(object):
             print("INFO: Video exists and --overwrite is not given, will skip further processing.")
             return vr.get_video_file()
 
+        audio_source = None
         background_song = self.choose_background_song()
         if background_song:
             audio_source = self.loop_audio(background_song, self.audio_loops)
 
         print("-" * 42)
         print("Creating video '%s'" % vr.get_video_file())
-        cd_cmd = 'cd "%s"' % project_path
-        run_cmd = self.get_gource_command(title = video_filename) + ' | ' + vr.get_command()
-        cmd = cd_cmd + '; ' + run_cmd
+        cmd = self.get_gource_command(path = project_path, title = video_filename) + ' | ' + vr.get_command()
         print("command:", cmd)
         print("-" * 42)
 
         if self.run_command(cmd):
             video_file = vr.get_video_file()
 
-        if background_song:
-            mixer = VideoAudioMixer(video_file, audio_source)
-            mixer.run()
+            if background_song:
+                mixer = VideoAudioMixer(video_file, audio_source)
+                mixer.run()
 
-        return video_file
+            return video_file
 
     def run_command(self, command):
         returncode = os.system(command)
@@ -168,7 +175,7 @@ class MediaInfo(object):
     def read_info(self):
         cmd = "ffprobe -i '%s'" % self.mediafile
         print("MediaInfo ffmpeg command:", cmd)
-        output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+        output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT).decode("utf-8")
         #print "MediaInfo output:", output
         self.raw = output
 
@@ -201,12 +208,12 @@ class VideoRecorder(object):
         # Some remarks about "ffmpeg" options:
         #   - The encoder 'aac' is experimental but experimental codecs are not enabled,
         #     add '-strict -2' if you want to use it.
-        command = """
+        command = f"""
             ffmpeg -y \\
                 -r 60 \\
                 -vcodec ppm -f image2pipe -i - \\
                 -vcodec libx264 -pix_fmt yuv420p -preset medium -threads 0 -strict -2 \\
-                "%(video_file)s" \\
+                "{self.video_file}" \\
             """ % arguments
         return command
 
@@ -237,20 +244,6 @@ class VideoAudioMixer(object):
         shutil.move(tmpfile, self.video_file)
 
 
-def render_all():
-    """Renders all projects' vcs repositories"""
-
-    print("Rendering project history of all projects using 'gource'")
-    source_path = sys.argv[1]
-    target_path = sys.argv[2]
-
-    if not os.path.isdir(target_path):
-        os.makedirs(target_path)
-
-    gr = GourceRenderer(source_path, target_path)
-    gr.process_projects()
-
-
 def render_single():
     """
     Renders single projects' vcs repository, e.g.::
@@ -266,13 +259,15 @@ def render_single():
     from optparse import OptionParser
     parser = OptionParser()
     parser.add_option("-p", "--path", dest = "path", help = "path to vcs repository")
+    parser.add_option("-o", "--outdir", dest = "outdir", help = "path to output directory")
     parser.add_option("-n", "--name", dest = "name", help = "project name (output video basename w/o extension) [optional]")
     parser.add_option("-a", "--audio-source", dest = "audio_source", type = "str", help = "path to background song")
     parser.add_option("-l", "--audio-loops", dest = "audio_loops", type = "int", help = "how often to loop the given background song (*must* be longer than video since ffmpeg is started with option '-shortest')")
-    parser.add_option("-o", "--overwrite", dest = "overwrite", action = "store_true", help = "whether to overwrite video files")
+    parser.add_option("-O", "--overwrite", dest = "overwrite", action = "store_true", help = "whether to overwrite video files")
     parser.add_option("-t", "--time-lapse", dest = "time_lapse", action = "store_true", help = "run in time-lapse mode")
     (options, args) = parser.parse_args()
 
+    # Sanity checks.
     if not options.path:
         print("ERROR: Option '--path' is mandatory!")
         sys.exit(1)
@@ -282,14 +277,19 @@ def render_single():
         print("ERROR: Directory '%s' does not exist" % options.path)
         sys.exit(1)
 
+    # Defaults.
+    if not options.outdir:
+        options.outdir = os.path.abspath(os.path.curdir)
+
     if not options.name:
         options.name = os.path.basename(options.path)
 
     print("Rendering project history of single project '%s <%s>' using 'gource'" % (options.name, options.path))
-    source_path = sys.argv[1]
-    target_path = sys.argv[2]
+    source_path = options.path
+    target_path = options.outdir
     gr = GourceRenderer(source_path, target_path, overwrite = options.overwrite, audio_source = options.audio_source, audio_loops = options.audio_loops, time_lapse = options.time_lapse)
     gr.process_project(path=options.path, name=options.name)
 
+
 if __name__ == '__main__':
-    render_all()
+    render_single()
