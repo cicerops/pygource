@@ -70,22 +70,22 @@ class GourceRenderer(object):
 
     def process_project(self, path: str, name: str):
 
-        print "=" * 42
-        print "Processing project '%s'" % name
-        print "=" * 42
+        print("=" * 42)
+        print("Processing project '%s'" % name)
+        print("=" * 42)
 
         video_file = self.create_video(path, self.output_path, name)
         if not video_file:
-            print "ERROR: video could not be created"
+            print("ERROR: video could not be created")
             return False
 
         mi = MediaInfo(video_file)
         if 'video' in mi.get_streams():
-            print "INFO: Video:    ", video_file
-            print "INFO: Duration: ", mi.duration
+            print("INFO: Video:    ", video_file)
+            print("INFO: Duration: ", mi.duration)
 
         else:
-            print "ERROR: video '%s' could not be recorded" % video_file
+            print("ERROR: video '%s' could not be recorded" % video_file)
             os.unlink(video_file)
             video_file = None
             return False
@@ -96,20 +96,20 @@ class GourceRenderer(object):
 
         vr = VideoRecorder(video_path, video_filename)
         if vr.exists() and not self.overwrite:
-            print "INFO: Video exists and --overwrite is not given, will skip further processing."
+            print("INFO: Video exists and --overwrite is not given, will skip further processing.")
             return vr.get_video_file()
 
         background_song = self.choose_background_song()
         if background_song:
             audio_source = self.loop_audio(background_song, self.audio_loops)
 
-        print "-" * 42
-        print "Creating video '%s'" % vr.get_video_file()
+        print("-" * 42)
+        print("Creating video '%s'" % vr.get_video_file())
         cd_cmd = 'cd "%s"' % project_path
         run_cmd = self.get_gource_command(title = video_filename) + ' | ' + vr.get_command()
         cmd = cd_cmd + '; ' + run_cmd
-        print "command:", cmd
-        print "-" * 42
+        print("command:", cmd)
+        print("-" * 42)
 
         if self.run_command(cmd):
             video_file = vr.get_video_file()
@@ -125,7 +125,7 @@ class GourceRenderer(object):
         if returncode == 0:
             return True
         else:
-            print "ERROR while executing command '%s'" % command
+            print("ERROR while executing command '%s'" % command)
             return False
 
     def loop_audio(self, audio_source, times = 2):
@@ -167,7 +167,7 @@ class MediaInfo(object):
 
     def read_info(self):
         cmd = "ffprobe -i '%s'" % self.mediafile
-        print "MediaInfo ffmpeg command:", cmd
+        print("MediaInfo ffmpeg command:", cmd)
         output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
         #print "MediaInfo output:", output
         self.raw = output
@@ -231,7 +231,7 @@ class VideoAudioMixer(object):
         extension = os.path.splitext(self.video_file)[1]
         tmpfile = self.video_file + '.tmp' + extension
         cmd = "ffmpeg -y -i '%s' -i '%s' -vcodec copy -acodec copy -async 1 -shortest '%s'" % (self.video_file, self.audio_file, tmpfile)
-        print "VideoAudioMixer ffmpeg command:", cmd
+        print("VideoAudioMixer ffmpeg command:", cmd)
         output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
         #print "VideoAudioMixer ffmpeg output:", output
         shutil.move(tmpfile, self.video_file)
@@ -240,7 +240,7 @@ class VideoAudioMixer(object):
 def render_all():
     """Renders all projects' vcs repositories"""
 
-    print "Rendering project history of all projects using 'gource'"
+    print("Rendering project history of all projects using 'gource'")
     source_path = sys.argv[1]
     target_path = sys.argv[2]
 
@@ -274,18 +274,18 @@ def render_single():
     (options, args) = parser.parse_args()
 
     if not options.path:
-        print "ERROR: Option '--path' is mandatory!"
+        print("ERROR: Option '--path' is mandatory!")
         sys.exit(1)
 
     options.path = os.path.abspath(options.path)
     if not os.path.isdir(options.path):
-        print "ERROR: Directory '%s' does not exist" % options.path
+        print("ERROR: Directory '%s' does not exist" % options.path)
         sys.exit(1)
 
     if not options.name:
         options.name = os.path.basename(options.path)
 
-    print "Rendering project history of single project '%s <%s>' using 'gource'" % (options.name, options.path)
+    print("Rendering project history of single project '%s <%s>' using 'gource'" % (options.name, options.path))
     source_path = sys.argv[1]
     target_path = sys.argv[2]
     gr = GourceRenderer(source_path, target_path, overwrite = options.overwrite, audio_source = options.audio_source, audio_loops = options.audio_loops, time_lapse = options.time_lapse)
