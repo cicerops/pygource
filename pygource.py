@@ -4,7 +4,6 @@ import re
 import shutil
 import shlex
 import subprocess
-from . import Project, walk_projects
 
 """
 Renders video of repository commit history using gource, adds background song.
@@ -69,28 +68,13 @@ class GourceRenderer(object):
         elif os.path.isfile(os.environ.get('GOURCE_AUDIO_SOURCE', '')):
             return os.environ.get('GOURCE_AUDIO_SOURCE')
 
-    def process_projects(self):
-
-        if not os.path.exists(self.output_path):
-            os.makedirs(self.output_path)
-
-        """Scans all main level directories in the projects directory"""
-        for project in walk_projects(self.project_path):
-
-            if project.name.endswith('-develop'): continue
-            self.process_project(project)
-            print
-
-            # debugging (exit after processing one video)
-            #break
-
-    def process_project(self, project):
+    def process_project(self, path: str, name: str):
 
         print "=" * 42
-        print "Processing project '%s'" % project.name
+        print "Processing project '%s'" % name
         print "=" * 42
 
-        video_file = self.create_video(project.path, self.output_path, project.name)
+        video_file = self.create_video(path, self.output_path, name)
         if not video_file:
             print "ERROR: video could not be created"
             return False
@@ -305,7 +289,7 @@ def render_single():
     source_path = sys.argv[1]
     target_path = sys.argv[2]
     gr = GourceRenderer(source_path, target_path, overwrite = options.overwrite, audio_source = options.audio_source, audio_loops = options.audio_loops, time_lapse = options.time_lapse)
-    gr.process_project(Project(name=options.name, path=options.path))
+    gr.process_project(path=options.path, name=options.name)
 
 if __name__ == '__main__':
     render_all()
