@@ -79,7 +79,7 @@ class GourceRenderer(object):
 
         speed_options = "                --seconds-per-day 5 --time-scale 1.5 \\\n"
         if self.time_lapse:
-            speed_options = "                --seconds-per-day 1 --time-scale 4 \\\n"
+            speed_options = "                --seconds-per-day 2.5 --time-scale 2 \\\n"
         speed_options += "                --file-idle-time 20 --max-file-lag 2.5 \\\n"
 
         gource_options = {
