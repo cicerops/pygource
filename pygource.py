@@ -53,6 +53,9 @@ class GourceRenderer(object):
                 --output-ppm-stream - \\
 %(date_options)s  \\
 %(speed_options)s  \\
+                --max-user-speed 250 \\
+                --user-scale 2 \\
+                --user-font-size 18 \\
                 %(path)s \\
         """
 
