@@ -81,6 +81,7 @@ Render and play video::
 
     python pygource.py \
         --name "CrateDB 2022H2" \
+        --start-date 2022-06-01 \
         --path ./var/crate \
         --audio-source "./var/Beastie boys - Suco De Tangerina.mp3" \
         --audio-loops 10 \

@@ -26,11 +26,22 @@ class GourceRenderer(object):
     """Renders project history using 'gource'."""
 
     def __init__(
-        self, source_path, target_path, overwrite=False, audio_source=None, audio_loops=None, time_lapse=False
+        self,
+        source_path,
+        target_path,
+        overwrite=False,
+        audio_source=None,
+        audio_loops=None,
+        start_date=None,
+        stop_date=None,
+        time_lapse=False,
     ):
 
         self.project_path = source_path
         self.output_path = target_path
+
+        self.start_date = start_date
+        self.stop_date = stop_date
 
         # configuration data
         self.gource_cmd_tpl = """
@@ -38,18 +49,14 @@ class GourceRenderer(object):
                 --title "%(title)s" --key \\
                 --viewport 1280x720 \\
                 --multi-sampling \\
-                --disable-auto-rotate \\
                 --hide bloom  \\
-                %(speed_options)s  \\
-                --file-idle-time 20 --max-file-lag 2.5  \\
-                --stop-at-end \\
                 --output-ppm-stream - \\
-                %(path)s """
-        #
-        # --start-date "2022-01-01" \\
-        # --stop-date "2022-03-31" \\
-        # --stop-at-time 1 \\
-        #
+%(date_options)s  \\
+%(speed_options)s  \\
+                %(path)s \\
+        """
+
+        # --disable-auto-rotate \\
 
         # options
         self.overwrite = overwrite
@@ -60,12 +67,25 @@ class GourceRenderer(object):
         self.time_lapse = time_lapse
 
     def get_gource_command(self, path: str, title: str):
-        speed_options = "--seconds-per-day 5 --time-scale 1.5"
+
+        date_options = ""
+        if self.start_date is not None:
+            date_options += f"                --start-date '{self.start_date}' \\\n"
+        if self.stop_date is not None:
+            date_options += f"                --stop-date '{self.stop_date}' \\\n"
+        else:
+            date_options += "                --stop-at-end \\\n"
+        # --stop-at-time 1
+
+        speed_options = "                --seconds-per-day 5 --time-scale 1.5 \\\n"
         if self.time_lapse:
-            speed_options = "--seconds-per-day 1 --time-scale 4"
+            speed_options = "                --seconds-per-day 1 --time-scale 4 \\\n"
+        speed_options += "                --file-idle-time 20 --max-file-lag 2.5 \\\n"
+
         gource_options = {
             "path": path,
             "title": title,
+            "date_options": date_options,
             "speed_options": speed_options,
         }
         command = self.gource_cmd_tpl % gource_options
@@ -116,7 +136,7 @@ class GourceRenderer(object):
 
         print("-" * 42)
         print("Creating video '%s'" % vr.get_video_file())
-        cmd = self.get_gource_command(path=project_path, title=video_filename) + " | " + vr.get_command()
+        cmd = self.get_gource_command(path=project_path, title=video_filename) + " | \\" + vr.get_command()
         print("command:", cmd)
         print("-" * 42)
 
@@ -273,6 +293,8 @@ def render():
     parser.add_option(
         "-O", "--overwrite", dest="overwrite", action="store_true", help="whether to overwrite video files"
     )
+    parser.add_option("--start-date", dest="start_date", help="Start at a date and optional time")
+    parser.add_option("--stop-date", dest="stop_date", help="Stop at a date and optional time")
     parser.add_option("-t", "--time-lapse", dest="time_lapse", action="store_true", help="run in time-lapse mode")
     (options, args) = parser.parse_args()
 
@@ -302,6 +324,8 @@ def render():
         overwrite=options.overwrite,
         audio_source=options.audio_source,
         audio_loops=options.audio_loops,
+        start_date=options.start_date,
+        stop_date=options.stop_date,
         time_lapse=options.time_lapse,
     )
     gr.process_project(path=options.path, name=options.name)
