@@ -1,5 +1,35 @@
+# ==================
+# Tool configuration
+# ==================
+
 [tool.isort]
 profile = "black"
 
 [tool.black]
 line-length = 120
+
+[tool.ruff]
+line-length = 120
+extend-exclude = [
+  "var",
+]
+
+
+# ===================
+# Tasks configuration
+# ===================
+
+[tool.poe.tasks]
+build = {cmd="python -m build"}
+format = [
+  {cmd="black ."},
+  {cmd="isort ."},
+]
+lint = [
+  {cmd="ruff ."},
+  {cmd="black --check ."},
+  {cmd="isort --check ."},
+]
+test = [
+  {cmd="pytest"},
+]

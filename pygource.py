@@ -249,7 +249,7 @@ class VideoAudioMixer(object):
         )
         print("VideoAudioMixer ffmpeg command:", cmd)
         output = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
-        # print "VideoAudioMixer ffmpeg output:", output
+        print("VideoAudioMixer ffmpeg output:", output)
         shutil.move(tmpfile, self.video_file)
 
 
@@ -277,7 +277,8 @@ def render_single():
         "--audio-loops",
         dest="audio_loops",
         type="int",
-        help="how often to loop the given background song (*must* be longer than video since ffmpeg is started with option '-shortest')",
+        help="how often to loop the given background song "
+        "(*must* be longer than video since ffmpeg is started with option '-shortest')",
     )
     parser.add_option(
         "-O", "--overwrite", dest="overwrite", action="store_true", help="whether to overwrite video files"
