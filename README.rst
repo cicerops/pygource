@@ -23,6 +23,22 @@ Setup
 Usage
 *****
 
+::
+
+    python pygource.py \
+        --name "Project ACME" \
+        --path /path/to/acme \
+        --audio-source '/path/to/audio.mp3' \
+        --audio-loops 10
+
+
+********
+Examples
+********
+
+Common
+======
+
 Get an audio file::
 
     youtube-dl --extract-audio --format=m4a \
@@ -36,32 +52,42 @@ Convert it to MP3 format::
         -c:v copy -c:a libmp3lame -q:a 4 \
         "./var/Beastie boys - Suco De Tangerina.mp3"
 
-Get sources of repository::
+Gource
+======
+
+Acquire sources::
 
     git clone https://github.com/acaudwell/Gource ./var/Gource
 
-Invoke renderer and play video, example 1::
+Render and play video::
 
     python pygource.py \
-        --name Gource \
+        --name "Gource" \
         --path "./var/Gource" \
         --audio-source "./var/Beastie boys - Suco De Tangerina.mp3" \
-        --audio-loops 2
+        --audio-loops 10
 
     open -a vlc Gource.mp4
 
-Invoke renderer and play video, example 2::
+
+CrateDB
+=======
+
+Acquire sources::
+
+    git clone https://github.com/crate/crate ./var/crate
+
+Render and play video::
 
     python pygource.py \
-        --name "CrateDB 2022Q1" \
-        --path ~/dev/crate/sources/crate \
+        --name "CrateDB 2022H2" \
+        --path ./var/crate \
         --audio-source "./var/Beastie boys - Suco De Tangerina.mp3" \
         --audio-loops 10 \
         --outdir "./var" \
         --overwrite
 
-    # --time-lapse \
+    open -a vlc "./var/CrateDB 2022H2.mp4"
 
-    open -a vlc "./var/CrateDB 2022Q1.mp4"
 
 .. _Gource: https://github.com/acaudwell/Gource

@@ -1,5 +1,5 @@
 """
-Renders video of repository commit history using gource, adds background song.
+Render video of VCS repository commit history using Gource, with audio.
 
 Prerequisites::
 
@@ -11,7 +11,7 @@ Synopsis::
         --name acme-trunk \
         --path ~/dev/three-investigators/acme/trunk \
         --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3' \
-        --audio-loops 50 \
+        --audio-loops 10 \
         # --overwrite
 """
 import os
@@ -253,17 +253,7 @@ class VideoAudioMixer(object):
         shutil.move(tmpfile, self.video_file)
 
 
-def render_single():
-    """
-    Renders single projects' vcs repository, e.g.::
-
-        bin/gource-render-single \
-            --name acme-trunk \
-            --path ~/dev/three-investigators/acme/trunk \
-            --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3' \
-            --audio-loops 50 \
-            # --overwrite
-    """
+def render():
 
     from optparse import OptionParser
 
@@ -318,4 +308,4 @@ def render_single():
 
 
 if __name__ == "__main__":
-    render_single()
+    render()
