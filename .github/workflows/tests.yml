@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allow job to be triggered manually.
+  workflow_dispatch:
+
+# Cancel in-progress jobs when pushing to the same branch.
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+
+  tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ "ubuntu-latest" ]
+        python-version: [ "3.10" ]
+
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    steps:
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get install gource ffmpeg mp3wrap
+
+      - name: Acquire sources
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-dev.txt
+
+      - name: Install package
+        run: pip install --requirement requirements-dev.txt
+
+      - name: Run linter
+        run: poe lint
+
+      - name: Run headless test
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: poe test
