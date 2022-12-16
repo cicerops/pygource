@@ -334,5 +334,30 @@ def render():
     gr.process_project(path=options.path, name=options.name)
 
 
+def test_pygource():
+    """
+    A quick test for PyGource.
+    """
+    from pathlib import Path
+    import tempfile
+    from urllib.request import urlretrieve
+    tmp = tempfile.NamedTemporaryFile(suffix=".mp3")
+    urlretrieve("https://download.samplelib.com/mp3/sample-6s.mp3", tmp.name)
+    command = f"""
+    python pygource.py \
+        --name "pygource-sample" \
+        --start-date 2022-12-01 \
+        --stop-date 2022-12-31 \
+        --time-lapse \
+        --path . \
+        --audio-source "{tmp.name}" \
+        --audio-loops 10 \
+        --outdir "./var" \
+        --overwrite
+    """
+    os.system(command)
+    assert Path("./var/pygource-sample.mp4").exists()
+
+
 if __name__ == "__main__":
     render()
