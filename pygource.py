@@ -11,7 +11,7 @@ Synopsis::
     python pygource.py \
         --name acme \
         --path ~/dev/sandbox/acme \
-        --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3'
+        --audio '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3'
 """
 import math
 import os
@@ -31,7 +31,7 @@ class GourceRenderer(object):
         source_path,
         target_path,
         overwrite=False,
-        audio_source=None,
+        audio=None,
         start_date=None,
         stop_date=None,
         time_lapse=False,
@@ -63,7 +63,7 @@ class GourceRenderer(object):
 
         # options
         self.overwrite = overwrite
-        self.audio_source = audio_source
+        self.audio = audio
         self.time_lapse = time_lapse
 
     def get_gource_command(self, path: str, title: str):
@@ -93,10 +93,10 @@ class GourceRenderer(object):
 
     def choose_background_song(self):
         # TODO: enhance song picker (e.g. random or mapped selection from a directory)
-        if self.audio_source and os.path.isfile(self.audio_source):
-            return self.audio_source
-        elif os.path.isfile(os.environ.get("GOURCE_AUDIO_SOURCE", "")):
-            return os.environ.get("GOURCE_AUDIO_SOURCE")
+        if self.audio and os.path.isfile(self.audio):
+            return self.audio
+        elif os.path.isfile(os.environ.get("GOURCE_AUDIO", "")):
+            return os.environ.get("GOURCE_AUDIO")
 
     def process_project(self, path: str, name: str):
 
@@ -138,9 +138,9 @@ class GourceRenderer(object):
         if run_command(cmd):
             video_file = vr.get_video_file()
 
-            audio_source = self.choose_background_song()
-            if audio_source:
-                mixer = VideoAudioMixer(video_file, audio_source)
+            audio_file = self.choose_background_song()
+            if audio_file:
+                mixer = VideoAudioMixer(video_file, audio_file)
                 mixer.extend_audio()
                 mixer.run()
 
@@ -252,7 +252,7 @@ class VideoAudioMixer(object):
         # TODO: remove looped audio file after usage
 
         name = os.path.basename(self.audio_file)
-        audio_sources = ('"%s" ' % self.audio_file) * times
+        audio_files = ('"%s" ' % self.audio_file) * times
         mp3wrap_file = "/tmp/tmp_%s" % name
 
         if not times or times <= 1:
@@ -264,7 +264,7 @@ class VideoAudioMixer(object):
         if os.path.exists(mp3wrap_file_real):
             os.unlink(mp3wrap_file_real)
 
-        mp3wrap_command = 'mp3wrap "%s" %s' % (mp3wrap_file, audio_sources)
+        mp3wrap_command = 'mp3wrap "%s" %s' % (mp3wrap_file, audio_files)
         if run_command(mp3wrap_command):
             return mp3wrap_file_real
 
@@ -304,7 +304,7 @@ def render():
     parser.add_option("-p", "--path", dest="path", help="path to vcs repository")
     parser.add_option("-o", "--outdir", dest="outdir", help="path to output directory")
     parser.add_option("-n", "--name", dest="name", help="project name (output video basename w/o extension) [optional]")
-    parser.add_option("-a", "--audio-source", dest="audio_source", type="str", help="path to background song")
+    parser.add_option("-a", "--audio", dest="audio", type="str", help="path to audio file")
     parser.add_option(
         "-O", "--overwrite", dest="overwrite", action="store_true", help="whether to overwrite video files"
     )
@@ -337,7 +337,7 @@ def render():
         source_path,
         target_path,
         overwrite=options.overwrite,
-        audio_source=options.audio_source,
+        audio=options.audio,
         start_date=options.start_date,
         stop_date=options.stop_date,
         time_lapse=options.time_lapse,
@@ -364,7 +364,7 @@ def test_pygource():
         --start-date 2022-12-01 \
         --stop-date 2022-12-31 \
         --path . \
-        --audio-source "{tmp.name}" \
+        --audio "{tmp.name}" \
         --outdir . \
         --overwrite
     """
