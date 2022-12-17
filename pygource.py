@@ -3,23 +3,24 @@ Render video of VCS repository commit history using Gource, with audio.
 
 Prerequisites::
 
+    apt install ffmpeg gource mp3wrap
     brew install ffmpeg gource mp3wrap
 
 Synopsis::
 
     python pygource.py \
-        --name acme-trunk \
-        --path ~/dev/three-investigators/acme/trunk \
-        --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3' \
-        --audio-loops 10 \
-        # --overwrite
+        --name acme \
+        --path ~/dev/sandbox/acme \
+        --audio-source '/home/foobar/music/Beastie boys/Suco De Tangerina.mp3'
 """
+import math
 import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import time
 
 
 class GourceRenderer(object):
@@ -31,7 +32,6 @@ class GourceRenderer(object):
         target_path,
         overwrite=False,
         audio_source=None,
-        audio_loops=None,
         start_date=None,
         stop_date=None,
         time_lapse=False,
@@ -63,10 +63,7 @@ class GourceRenderer(object):
 
         # options
         self.overwrite = overwrite
-        if audio_loops is None:
-            audio_loops = 10
         self.audio_source = audio_source
-        self.audio_loops = audio_loops
         self.time_lapse = time_lapse
 
     def get_gource_command(self, path: str, title: str):
@@ -132,54 +129,22 @@ class GourceRenderer(object):
             print("INFO: Video exists and --overwrite is not given, will skip further processing.")
             return vr.get_video_file()
 
-        audio_source = None
-        background_song = self.choose_background_song()
-        if background_song:
-            audio_source = self.loop_audio(background_song, self.audio_loops)
-
         print("-" * 42)
         print("Creating video '%s'" % vr.get_video_file())
         cmd = self.get_gource_command(path=project_path, title=video_filename) + " | \\" + vr.get_command()
         print("command:", cmd)
         print("-" * 42)
 
-        if self.run_command(cmd):
+        if run_command(cmd):
             video_file = vr.get_video_file()
 
-            if background_song:
+            audio_source = self.choose_background_song()
+            if audio_source:
                 mixer = VideoAudioMixer(video_file, audio_source)
+                mixer.extend_audio()
                 mixer.run()
 
             return video_file
-
-    def run_command(self, command):
-        returncode = os.system(command)
-        if returncode == 0:
-            return True
-        else:
-            print("ERROR while executing command '%s'" % command)
-            return False
-
-    def loop_audio(self, audio_source, times=2):
-
-        # TODO: remove looped audio file after usage
-
-        name = os.path.basename(audio_source)
-        audio_sources = ('"%s" ' % audio_source) * times
-        mp3wrap_file = "/tmp/tmp_%s" % name
-
-        if not times or times <= 1:
-            shutil.copy(audio_source, mp3wrap_file)
-            return mp3wrap_file
-
-        # WTF?
-        mp3wrap_file_real = mp3wrap_file.replace(".mp3", "_MP3WRAP.mp3")
-        if os.path.exists(mp3wrap_file_real):
-            os.unlink(mp3wrap_file_real)
-
-        mp3wrap_command = 'mp3wrap "%s" %s' % (mp3wrap_file, audio_sources)
-        if self.run_command(mp3wrap_command):
-            return mp3wrap_file_real
 
 
 class MediaInfo(object):
@@ -275,6 +240,61 @@ class VideoAudioMixer(object):
         print("VideoAudioMixer ffmpeg output:", output)
         shutil.move(tmpfile, self.video_file)
 
+    def extend_audio(self):
+        video_info = MediaInfo(mediafile=self.video_file)
+        audio_info = MediaInfo(mediafile=self.audio_file)
+        loops = self.get_audio_loops(video_info.duration, audio_info.duration)
+        print(f"Repeating audio {loops} times to match length of video")
+        self.audio_file = self.loop_audio(times=loops)
+
+    def loop_audio(self, times=2):
+
+        # TODO: remove looped audio file after usage
+
+        name = os.path.basename(self.audio_file)
+        audio_sources = ('"%s" ' % self.audio_file) * times
+        mp3wrap_file = "/tmp/tmp_%s" % name
+
+        if not times or times <= 1:
+            shutil.copy(self.audio_file, mp3wrap_file)
+            return mp3wrap_file
+
+        # WTF?
+        mp3wrap_file_real = mp3wrap_file.replace(".mp3", "_MP3WRAP.mp3")
+        if os.path.exists(mp3wrap_file_real):
+            os.unlink(mp3wrap_file_real)
+
+        mp3wrap_command = 'mp3wrap "%s" %s' % (mp3wrap_file, audio_sources)
+        if run_command(mp3wrap_command):
+            return mp3wrap_file_real
+
+    @classmethod
+    def get_audio_loops(cls, video_duration, audio_duration):
+        """
+        d1 = "00:03:16.18"
+        d2 = "00:00:06.43"
+        >>> get_audio_loops(d1, d2)
+        33
+        """
+        factor = cls.duration_to_seconds(video_duration) / cls.duration_to_seconds(audio_duration)
+        loops = math.ceil(factor)
+        return loops
+
+    @classmethod
+    def duration_to_seconds(cls, duration):
+        time_struct = time.strptime(duration, "%H:%M:%S.%f")
+        seconds = time_struct.tm_hour * 3600 + time_struct.tm_min * 60 + time_struct.tm_sec
+        return seconds
+
+
+def run_command(command):
+    returncode = os.system(command)
+    if returncode == 0:
+        return True
+    else:
+        print("ERROR while executing command '%s'" % command)
+        return False
+
 
 def render():
 
@@ -285,14 +305,6 @@ def render():
     parser.add_option("-o", "--outdir", dest="outdir", help="path to output directory")
     parser.add_option("-n", "--name", dest="name", help="project name (output video basename w/o extension) [optional]")
     parser.add_option("-a", "--audio-source", dest="audio_source", type="str", help="path to background song")
-    parser.add_option(
-        "-l",
-        "--audio-loops",
-        dest="audio_loops",
-        type="int",
-        help="how often to loop the given background song "
-        "(*must* be longer than video since ffmpeg is started with option '-shortest')",
-    )
     parser.add_option(
         "-O", "--overwrite", dest="overwrite", action="store_true", help="whether to overwrite video files"
     )
@@ -326,7 +338,6 @@ def render():
         target_path,
         overwrite=options.overwrite,
         audio_source=options.audio_source,
-        audio_loops=options.audio_loops,
         start_date=options.start_date,
         stop_date=options.stop_date,
         time_lapse=options.time_lapse,
@@ -342,6 +353,9 @@ def test_pygource():
     from pathlib import Path
     from urllib.request import urlretrieve
 
+    outfile = Path("./pygource-testdrive.mp4")
+    outfile.unlink(missing_ok=True)
+
     tmp = tempfile.NamedTemporaryFile(suffix=".mp3")
     urlretrieve("https://download.samplelib.com/mp3/sample-6s.mp3", tmp.name)
     command = f"""
@@ -351,12 +365,11 @@ def test_pygource():
         --stop-date 2022-12-31 \
         --path . \
         --audio-source "{tmp.name}" \
-        --audio-loops 10 \
         --outdir . \
         --overwrite
     """
     os.system(command)
-    assert Path("./pygource-testdrive.mp4").exists()
+    assert outfile.exists()
 
 
 if __name__ == "__main__":
