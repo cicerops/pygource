@@ -14,7 +14,11 @@ Render video of VCS repository commit history using `Gource`_, with audio.
 Setup
 *****
 
-::
+Debian Linux::
+
+    apt install ffmpeg gource mp3wrap youtube-dl
+
+macOS/Homebrew::
 
     brew install ffmpeg gource mp3wrap youtube-dl
 
