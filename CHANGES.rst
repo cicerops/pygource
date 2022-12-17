@@ -5,6 +5,10 @@ PyGource changelog
 
 in progress
 ===========
+
+
+2022-12-17 0.2.0
+================
 - Add compatibility with Python 3, drop support for Python 2
 - Remove processing on multiple projects
 - Slicing: Add ``--start-date`` and ``--stop-date`` options
