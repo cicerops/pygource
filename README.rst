@@ -28,8 +28,7 @@ Usage
     python pygource.py \
         --name "Project ACME" \
         --path /path/to/acme \
-        --audio-source '/path/to/audio.mp3' \
-        --audio-loops 10
+        --audio '/path/to/audio.mp3'
 
 
 ********
@@ -64,8 +63,7 @@ Render and play video::
     python pygource.py \
         --name "Gource" \
         --path "./var/Gource" \
-        --audio-source "./var/Beastie boys - Suco De Tangerina.mp3" \
-        --audio-loops 10
+        --audio "./var/Beastie boys - Suco De Tangerina.mp3"
 
     open -a vlc Gource.mp4
 
@@ -84,8 +82,7 @@ Render and play video::
         --start-date 2022-06-01 \
         --time-lapse \
         --path ./var/crate \
-        --audio-source "./var/Beastie boys - Suco De Tangerina.mp3" \
-        --audio-loops 10 \
+        --audio "./var/Beastie boys - Suco De Tangerina.mp3" \
         --outdir "./var" \
         --overwrite
 
